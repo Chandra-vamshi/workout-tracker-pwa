@@ -23,6 +23,7 @@ const els = {
   panels: document.querySelectorAll('.panel'),
   form: document.querySelector('#workoutForm'),
   date: document.querySelector('#date'),
+  workoutType: document.querySelector('#workoutType'),
   exerciseList: document.querySelector('#exerciseList'),
   cardioList: document.querySelector('#cardioList'),
   historyList: document.querySelector('#historyList'),
@@ -100,8 +101,8 @@ function collectWorkout() {
   return {
     id: uid(),
     createdAt: new Date().toISOString(),
-    date: document.querySelector('#date').value,
-    workoutType: document.querySelector('#workoutType').value,
+    date: els.date.value,
+    workoutType: els.workoutType.value,
     exercises,
     cardio,
     energy: document.querySelector('#energy').value.trim(),
@@ -118,6 +119,48 @@ function resetForm() {
   els.exerciseList.innerHTML = '';
   els.cardioList.innerHTML = '';
   addExercise();
+}
+
+function populateWorkoutForm(workout) {
+  els.form.reset();
+  els.exerciseList.innerHTML = '';
+  els.cardioList.innerHTML = '';
+
+  els.date.value = todayISO();
+  els.workoutType.value = workout.workoutType || 'Full Body';
+
+  document.querySelector('#energy').value = workout.energy || '';
+  document.querySelector('#soreness').value = workout.soreness || '';
+  document.querySelector('#sleepHours').value = workout.sleepHours || '';
+  document.querySelector('#sleepMinutes').value = workout.sleepMinutes || '';
+  document.querySelector('#notes').value = workout.notes || '';
+
+  if (workout.exercises && workout.exercises.length) {
+    workout.exercises.forEach(exercise => addExercise(exercise));
+  } else {
+    addExercise();
+  }
+
+  if (workout.cardio && workout.cardio.length) {
+    workout.cardio.forEach(cardio => addCardio(cardio));
+  }
+}
+
+function duplicateLastWorkout() {
+  if (!state.workouts.length) {
+    alert('No previous workout found.');
+    return;
+  }
+
+  const sorted = [...state.workouts].sort((a, b) => {
+    const dateCompare = b.date.localeCompare(a.date);
+    if (dateCompare) return dateCompare;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+
+  const lastWorkout = sorted[0];
+  populateWorkoutForm(lastWorkout);
+  switchTab('log');
 }
 
 function switchTab(tabName) {
@@ -229,6 +272,7 @@ function init() {
   els.tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
   document.querySelector('#addExerciseBtn').addEventListener('click', () => addExercise());
   document.querySelector('#addCardioBtn').addEventListener('click', () => addCardio());
+  document.querySelector('#duplicateLastWorkoutBtn').addEventListener('click', duplicateLastWorkout);
   document.querySelector('#resetFormBtn').addEventListener('click', resetForm);
   document.querySelector('#downloadCsvBtn').addEventListener('click', downloadCsv);
   document.querySelector('#copyCsvBtn').addEventListener('click', async () => {
