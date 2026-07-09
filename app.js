@@ -15,20 +15,29 @@ const strengthExercises = [
 const cardioMachines = ['Treadmill', 'Elliptical', 'Cycle'];
 
 const state = {
-  workouts: loadWorkouts()
+  workouts: loadWorkouts(),
+  incompleteWorkoutId: null
 };
 
 const els = {
   tabs: document.querySelectorAll('.tab'),
   panels: document.querySelectorAll('.panel'),
   form: document.querySelector('#workoutForm'),
+  completeWorkoutForm: document.querySelector('#completeWorkoutForm'),
   date: document.querySelector('#date'),
   workoutType: document.querySelector('#workoutType'),
   exerciseList: document.querySelector('#exerciseList'),
   cardioList: document.querySelector('#cardioList'),
   historyList: document.querySelector('#historyList'),
   csvPreview: document.querySelector('#csvPreview'),
-  installDialog: document.querySelector('#installDialog')
+  installDialog: document.querySelector('#installDialog'),
+  completeIncompleteWorkoutBtn: document.querySelector('#completeIncompleteWorkoutBtn'),
+  dashboardActions: document.querySelector('#dashboardActions'),
+  completeWorkoutMessage: document.querySelector('#completeWorkoutMessage'),
+  completeSleepHours: document.querySelector('#completeSleepHours'),
+  completeSleepMinutes: document.querySelector('#completeSleepMinutes'),
+  completeEnergy: document.querySelector('#completeEnergy'),
+  completeSoreness: document.querySelector('#completeSoreness')
 };
 
 function todayISO() {
@@ -146,6 +155,83 @@ function populateWorkoutForm(workout) {
   }
 }
 
+function hasSleep(workout) {
+  const hours = String(workout.sleepHours ?? '').trim();
+  const minutes = String(workout.sleepMinutes ?? '').trim();
+  return hours !== '' || minutes !== '';
+}
+
+function findMostRecentIncompleteWorkout() {
+  return [...state.workouts]
+    .filter(workout => !hasSleep(workout))
+    .sort((a, b) => {
+      const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
+      if (dateCompare) return dateCompare;
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    })[0] || null;
+}
+
+function updateIncompleteButton() {
+  const incompleteWorkout = findMostRecentIncompleteWorkout();
+  els.completeIncompleteWorkoutBtn.hidden = !incompleteWorkout;
+  els.dashboardActions.hidden = !incompleteWorkout;
+}
+
+function showDashboardForm() {
+  state.incompleteWorkoutId = null;
+  els.completeWorkoutForm.hidden = true;
+  els.form.hidden = false;
+  document.querySelector('#duplicateLastWorkoutBtn').hidden = false;
+  updateIncompleteButton();
+}
+
+function showCompleteWorkoutForm() {
+  const workout = findMostRecentIncompleteWorkout();
+
+  if (!workout) {
+    alert('All workouts are complete.');
+    showDashboardForm();
+    return;
+  }
+
+  state.incompleteWorkoutId = workout.id;
+  els.form.hidden = true;
+  els.dashboardActions.hidden = true;
+  document.querySelector('#duplicateLastWorkoutBtn').hidden = true;
+  els.completeWorkoutForm.hidden = false;
+
+  els.completeWorkoutMessage.textContent = `${workout.date || 'Workout'} · ${workout.workoutType || 'Workout'}`;
+  els.completeSleepHours.value = workout.sleepHours || '';
+  els.completeSleepMinutes.value = workout.sleepMinutes || '';
+  els.completeEnergy.value = workout.energy || '';
+  els.completeSoreness.value = workout.soreness || '';
+
+  els.completeSleepHours.focus();
+}
+
+function saveCompletedWorkout(event) {
+  event.preventDefault();
+
+  const workout = state.workouts.find(item => item.id === state.incompleteWorkoutId);
+
+  if (!workout) {
+    alert('All workouts are complete.');
+    showDashboardForm();
+    return;
+  }
+
+  workout.sleepHours = els.completeSleepHours.value.trim();
+  workout.sleepMinutes = els.completeSleepMinutes.value.trim();
+  workout.energy = els.completeEnergy.value.trim();
+  workout.soreness = els.completeSoreness.value.trim();
+
+  saveWorkouts();
+  renderHistory();
+  renderCsv();
+  showDashboardForm();
+  switchTab('log');
+}
+
 function duplicateLastWorkout() {
   if (!state.workouts.length) {
     alert('No previous workout found.');
@@ -153,9 +239,9 @@ function duplicateLastWorkout() {
   }
 
   const sorted = [...state.workouts].sort((a, b) => {
-    const dateCompare = b.date.localeCompare(a.date);
+    const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
     if (dateCompare) return dateCompare;
-    return b.createdAt.localeCompare(a.createdAt);
+    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
   });
 
   const lastWorkout = sorted[0];
@@ -166,6 +252,11 @@ function duplicateLastWorkout() {
 function switchTab(tabName) {
   els.tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
   els.panels.forEach(panel => panel.classList.toggle('active', panel.id === tabName));
+
+  if (tabName !== 'log') {
+    showDashboardForm();
+  }
+
   if (tabName === 'history') renderHistory();
   if (tabName === 'export') renderCsv();
 }
@@ -179,13 +270,14 @@ function summarizeWorkout(workout) {
 function renderHistory() {
   if (!state.workouts.length) {
     els.historyList.innerHTML = '<p class="muted">No workouts saved yet.</p>';
+    updateIncompleteButton();
     return;
   }
 
-  const sorted = [...state.workouts].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  const sorted = [...state.workouts].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   els.historyList.innerHTML = sorted.map(workout => {
     const summary = summarizeWorkout(workout).map(line => `<div>${escapeHtml(line)}</div>`).join('') || '<div>No exercise details saved.</div>';
-    const sleep = [workout.sleepHours || 0, 'h ', workout.sleepMinutes || 0, 'm'].join('');
+    const sleep = hasSleep(workout) ? [workout.sleepHours || 0, 'h ', workout.sleepMinutes || 0, 'm'].join('') : 'Incomplete';
     return `
       <article class="history-item">
         <h3>${escapeHtml(workout.date)} · ${escapeHtml(workout.workoutType)}</h3>
@@ -205,8 +297,11 @@ function renderHistory() {
       saveWorkouts();
       renderHistory();
       renderCsv();
+      updateIncompleteButton();
     });
   });
+
+  updateIncompleteButton();
 }
 
 function csvEscape(value) {
@@ -268,11 +363,15 @@ function init() {
   addExercise();
   renderHistory();
   renderCsv();
+  updateIncompleteButton();
 
   els.tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
   document.querySelector('#addExerciseBtn').addEventListener('click', () => addExercise());
   document.querySelector('#addCardioBtn').addEventListener('click', () => addCardio());
   document.querySelector('#duplicateLastWorkoutBtn').addEventListener('click', duplicateLastWorkout);
+  document.querySelector('#completeIncompleteWorkoutBtn').addEventListener('click', showCompleteWorkoutForm);
+  document.querySelector('#completeWorkoutForm').addEventListener('submit', saveCompletedWorkout);
+  document.querySelector('#cancelCompleteWorkoutBtn').addEventListener('click', showDashboardForm);
   document.querySelector('#resetFormBtn').addEventListener('click', resetForm);
   document.querySelector('#downloadCsvBtn').addEventListener('click', downloadCsv);
   document.querySelector('#copyCsvBtn').addEventListener('click', async () => {
@@ -286,6 +385,8 @@ function init() {
       saveWorkouts();
       renderHistory();
       renderCsv();
+      updateIncompleteButton();
+      showDashboardForm();
     }
   });
   document.querySelector('#installHintBtn').addEventListener('click', () => els.installDialog.showModal());
@@ -299,6 +400,7 @@ function init() {
     resetForm();
     renderHistory();
     renderCsv();
+    updateIncompleteButton();
     switchTab('history');
   });
 
