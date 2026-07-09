@@ -69,15 +69,105 @@ function fillSelect(select, options) {
   select.innerHTML = options.map(option => `<option>${option}</option>`).join('');
 }
 
-function addExercise(data = {}) {
+function sortWorkoutsNewestFirst(a, b) {
+  const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
+  if (dateCompare) return dateCompare;
+  return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+}
+
+function getWorkoutTimestamp(workout) {
+  return `${workout.date || ''}T${workout.createdAt || ''}`;
+}
+
+function findWorkoutById(id) {
+  return state.workouts.find(workout => workout.id === id) || null;
+}
+
+function findMostRecentExerciseOccurrence(exerciseName, options = {}) {
+  const excludeWorkoutId = options.excludeWorkoutId || null;
+  const beforeWorkout = options.beforeWorkout || null;
+  const beforeTimestamp = beforeWorkout ? getWorkoutTimestamp(beforeWorkout) : null;
+
+  const matches = [];
+
+  state.workouts.forEach(workout => {
+    if (excludeWorkoutId && workout.id === excludeWorkoutId) return;
+    if (beforeTimestamp && getWorkoutTimestamp(workout) >= beforeTimestamp) return;
+
+    (workout.exercises || []).forEach(exercise => {
+      if (exercise.name === exerciseName) {
+        matches.push({
+          workout,
+          exercise
+        });
+      }
+    });
+  });
+
+  return matches.sort((a, b) => sortWorkoutsNewestFirst(a.workout, b.workout))[0] || null;
+}
+
+function formatPreviousExercise(exercise) {
+  return `Last: ${exercise.sets || '-'} × ${exercise.reps || '-'} @ ${exercise.weight || '-'} lb`;
+}
+
+function updatePreviousExerciseInfo(entry, options = {}) {
+  const exerciseName = entry.querySelector('.exercise-name').value;
+  const previous = findMostRecentExerciseOccurrence(exerciseName, {
+    excludeWorkoutId: options.excludeWorkoutId
+  });
+  const previousText = entry.querySelector('.previous-exercise-values');
+  const setsInput = entry.querySelector('.exercise-sets');
+  const repsInput = entry.querySelector('.exercise-reps');
+  const weightInput = entry.querySelector('.exercise-weight');
+
+  if (!previous) {
+    previousText.textContent = 'No previous data';
+
+    if (options.prefill) {
+      setsInput.value = '';
+      repsInput.value = '';
+      weightInput.value = '';
+    }
+
+    return;
+  }
+
+  previousText.textContent = formatPreviousExercise(previous.exercise);
+
+  if (options.prefill) {
+    setsInput.value = previous.exercise.sets || '';
+    repsInput.value = previous.exercise.reps || '';
+    weightInput.value = previous.exercise.weight || '';
+  }
+}
+
+function addExercise(data = {}, options = {}) {
+  const settings = {
+    prefill: options.prefill ?? true,
+    excludeWorkoutId: options.excludeWorkoutId || null
+  };
+
   const node = document.querySelector('#exerciseTemplate').content.firstElementChild.cloneNode(true);
-  fillSelect(node.querySelector('.exercise-name'), strengthExercises);
-  node.querySelector('.exercise-name').value = data.name || strengthExercises[0];
+  const nameSelect = node.querySelector('.exercise-name');
+
+  fillSelect(nameSelect, strengthExercises);
+  nameSelect.value = data.name || strengthExercises[0];
+
   node.querySelector('.exercise-sets').value = data.sets || '';
   node.querySelector('.exercise-reps').value = data.reps || '';
   node.querySelector('.exercise-weight').value = data.weight || '';
+
   node.querySelector('.remove-entry').addEventListener('click', () => node.remove());
+  nameSelect.addEventListener('change', () => {
+    updatePreviousExerciseInfo(node, {
+      prefill: true,
+      excludeWorkoutId: settings.excludeWorkoutId
+    });
+  });
+
   els.exerciseList.appendChild(node);
+  updatePreviousExerciseInfo(node, settings);
 }
 
 function addCardio(data = {}) {
@@ -151,9 +241,15 @@ function populateWorkoutForm(workout, options = {}) {
   document.querySelector('#notes').value = workout.notes || '';
 
   if (workout.exercises && workout.exercises.length) {
-    workout.exercises.forEach(exercise => addExercise(exercise));
+    workout.exercises.forEach(exercise => addExercise(exercise, {
+      prefill: false,
+      excludeWorkoutId: options.excludeWorkoutId || null
+    }));
   } else {
-    addExercise();
+    addExercise({}, {
+      prefill: true,
+      excludeWorkoutId: options.excludeWorkoutId || null
+    });
   }
 
   if (workout.cardio && workout.cardio.length) {
@@ -171,16 +267,6 @@ function findMostRecentIncompleteWorkout() {
   return [...state.workouts]
     .filter(workout => !hasSleep(workout))
     .sort(sortWorkoutsNewestFirst)[0] || null;
-}
-
-function sortWorkoutsNewestFirst(a, b) {
-  const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
-  if (dateCompare) return dateCompare;
-  return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
-}
-
-function findWorkoutById(id) {
-  return state.workouts.find(workout => workout.id === id) || null;
 }
 
 function updateIncompleteButton() {
@@ -248,7 +334,10 @@ function editWorkout(workoutId) {
   if (!workout) return;
 
   state.editingWorkoutId = workout.id;
-  populateWorkoutForm(workout, { useToday: false });
+  populateWorkoutForm(workout, {
+    useToday: false,
+    excludeWorkoutId: workout.id
+  });
   els.logHeading.textContent = 'Edit workout';
   els.saveWorkoutBtn.textContent = 'Update workout';
   showDashboardForm();
@@ -260,7 +349,9 @@ function duplicateWorkout(workoutId) {
   if (!workout) return;
 
   state.editingWorkoutId = null;
-  populateWorkoutForm(workout, { useToday: true });
+  populateWorkoutForm(workout, {
+    useToday: true
+  });
   els.logHeading.textContent = 'New workout';
   els.saveWorkoutBtn.textContent = 'Save workout';
   showDashboardForm();
@@ -333,6 +424,22 @@ function getCardioSummary(workout) {
     .join(' · ');
 }
 
+function workoutHasWeightIncrease(workout) {
+  return (workout.exercises || []).some(exercise => {
+    const currentWeight = Number(exercise.weight);
+    if (!Number.isFinite(currentWeight) || currentWeight <= 0) return false;
+
+    const previous = findMostRecentExerciseOccurrence(exercise.name, {
+      beforeWorkout: workout
+    });
+
+    if (!previous) return false;
+
+    const previousWeight = Number(previous.exercise.weight);
+    return Number.isFinite(previousWeight) && currentWeight > previousWeight;
+  });
+}
+
 function renderHistory() {
   if (!state.workouts.length) {
     els.historyList.innerHTML = '<p class="muted">No workouts saved yet.</p>';
@@ -347,6 +454,7 @@ function renderHistory() {
     const exerciseCount = workout.exercises ? workout.exercises.length : 0;
     const cardioSummary = getCardioSummary(workout);
     const status = complete ? '🟢 Complete' : '🟡 Incomplete';
+    const increaseNote = workoutHasWeightIncrease(workout) ? '<div>⬆ Increased from last time</div>' : '';
 
     return `
       <article class="history-item">
@@ -356,6 +464,7 @@ function renderHistory() {
           <div>${status}</div>
           <div>${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}${cardioSummary ? ` · ${escapeHtml(cardioSummary)}` : ''}</div>
           <div>Energy: ${escapeHtml(workout.energy || '-')} /10 · Soreness: ${escapeHtml(workout.soreness || '-')} /10</div>
+          ${increaseNote}
         </div>
         <div class="history-actions">
           <button class="secondary" data-edit="${workout.id}" type="button">Edit</button>
@@ -405,19 +514,26 @@ function toCsvRows() {
   ];
 
   const rows = [headers];
+
   state.workouts.forEach(workout => {
-    workout.exercises.forEach(ex => rows.push([
+    const exercises = workout.exercises || [];
+    const cardio = workout.cardio || [];
+
+    exercises.forEach(ex => rows.push([
       workout.date, workout.workoutType, 'strength', ex.name, ex.sets, ex.reps, ex.weight,
       '', '', '', workout.energy, workout.soreness, workout.sleepHours, workout.sleepMinutes, workout.notes
     ]));
-    workout.cardio.forEach(c => rows.push([
+
+    cardio.forEach(c => rows.push([
       workout.date, workout.workoutType, 'cardio', c.machine, '', '', '', c.timeMinutes,
       c.intensity, c.incline, workout.energy, workout.soreness, workout.sleepHours, workout.sleepMinutes, workout.notes
     ]));
-    if (!workout.exercises.length && !workout.cardio.length) {
+
+    if (!exercises.length && !cardio.length) {
       rows.push([workout.date, workout.workoutType, 'workout', '', '', '', '', '', '', '', workout.energy, workout.soreness, workout.sleepHours, workout.sleepMinutes, workout.notes]);
     }
   });
+
   return rows.map(row => row.map(csvEscape).join(',')).join('\n');
 }
 
