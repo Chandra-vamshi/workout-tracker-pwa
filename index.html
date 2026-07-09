@@ -29,6 +29,10 @@
     </nav>
 
     <section id="log" class="panel active" aria-labelledby="log-heading">
+      <div id="dashboardActions" class="section-card">
+        <button id="completeIncompleteWorkoutBtn" class="primary wide" type="button" hidden>Complete Incomplete Workout</button>
+      </div>
+
       <div class="section-title-row">
         <h2 id="log-heading">New workout</h2>
         <button id="duplicateLastWorkoutBtn" class="secondary" type="button">Duplicate Last Workout</button>
@@ -89,6 +93,32 @@
         <div class="sticky-actions">
           <button class="primary" type="submit">Save workout</button>
           <button id="resetFormBtn" class="ghost" type="button">Reset</button>
+        </div>
+      </form>
+
+      <form id="completeWorkoutForm" autocomplete="off" hidden>
+        <div class="section-card">
+          <h2>Complete incomplete workout</h2>
+          <p id="completeWorkoutMessage" class="muted"></p>
+          <div class="grid two">
+            <label>Sleep hours
+              <input id="completeSleepHours" type="number" min="0" max="24" inputmode="numeric" placeholder="7" />
+            </label>
+            <label>Sleep minutes
+              <input id="completeSleepMinutes" type="number" min="0" max="59" inputmode="numeric" placeholder="30" />
+            </label>
+            <label>Energy /10
+              <input id="completeEnergy" type="number" min="1" max="10" inputmode="numeric" placeholder="8" />
+            </label>
+            <label>Soreness /10
+              <input id="completeSoreness" type="number" min="1" max="10" inputmode="numeric" placeholder="3" />
+            </label>
+          </div>
+        </div>
+
+        <div class="sticky-actions">
+          <button class="primary" type="submit">Save</button>
+          <button id="cancelCompleteWorkoutBtn" class="ghost" type="button">Cancel</button>
         </div>
       </form>
     </section>
