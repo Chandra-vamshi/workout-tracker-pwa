@@ -16,7 +16,8 @@ const cardioMachines = ['Treadmill', 'Elliptical', 'Cycle'];
 
 const state = {
   workouts: loadWorkouts(),
-  incompleteWorkoutId: null
+  incompleteWorkoutId: null,
+  editingWorkoutId: null
 };
 
 const els = {
@@ -37,7 +38,9 @@ const els = {
   completeSleepHours: document.querySelector('#completeSleepHours'),
   completeSleepMinutes: document.querySelector('#completeSleepMinutes'),
   completeEnergy: document.querySelector('#completeEnergy'),
-  completeSoreness: document.querySelector('#completeSoreness')
+  completeSoreness: document.querySelector('#completeSoreness'),
+  saveWorkoutBtn: document.querySelector('#saveWorkoutBtn'),
+  logHeading: document.querySelector('#log-heading')
 };
 
 function todayISO() {
@@ -123,19 +126,22 @@ function collectWorkout() {
 }
 
 function resetForm() {
+  state.editingWorkoutId = null;
   els.form.reset();
   els.date.value = todayISO();
   els.exerciseList.innerHTML = '';
   els.cardioList.innerHTML = '';
+  els.logHeading.textContent = 'New workout';
+  els.saveWorkoutBtn.textContent = 'Save workout';
   addExercise();
 }
 
-function populateWorkoutForm(workout) {
+function populateWorkoutForm(workout, options = {}) {
   els.form.reset();
   els.exerciseList.innerHTML = '';
   els.cardioList.innerHTML = '';
 
-  els.date.value = todayISO();
+  els.date.value = options.useToday ? todayISO() : workout.date || todayISO();
   els.workoutType.value = workout.workoutType || 'Full Body';
 
   document.querySelector('#energy').value = workout.energy || '';
@@ -164,11 +170,17 @@ function hasSleep(workout) {
 function findMostRecentIncompleteWorkout() {
   return [...state.workouts]
     .filter(workout => !hasSleep(workout))
-    .sort((a, b) => {
-      const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
-      if (dateCompare) return dateCompare;
-      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
-    })[0] || null;
+    .sort(sortWorkoutsNewestFirst)[0] || null;
+}
+
+function sortWorkoutsNewestFirst(a, b) {
+  const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
+  if (dateCompare) return dateCompare;
+  return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+}
+
+function findWorkoutById(id) {
+  return state.workouts.find(workout => workout.id === id) || null;
 }
 
 function updateIncompleteButton() {
@@ -181,14 +193,13 @@ function showDashboardForm() {
   state.incompleteWorkoutId = null;
   els.completeWorkoutForm.hidden = true;
   els.form.hidden = false;
-  document.querySelector('#duplicateLastWorkoutBtn').hidden = false;
   updateIncompleteButton();
 }
 
-function showCompleteWorkoutForm() {
-  const workout = findMostRecentIncompleteWorkout();
+function showCompleteWorkoutForm(workoutId = null) {
+  const workout = workoutId ? findWorkoutById(workoutId) : findMostRecentIncompleteWorkout();
 
-  if (!workout) {
+  if (!workout || hasSleep(workout)) {
     alert('All workouts are complete.');
     showDashboardForm();
     return;
@@ -197,7 +208,6 @@ function showCompleteWorkoutForm() {
   state.incompleteWorkoutId = workout.id;
   els.form.hidden = true;
   els.dashboardActions.hidden = true;
-  document.querySelector('#duplicateLastWorkoutBtn').hidden = true;
   els.completeWorkoutForm.hidden = false;
 
   els.completeWorkoutMessage.textContent = `${workout.date || 'Workout'} · ${workout.workoutType || 'Workout'}`;
@@ -206,13 +216,14 @@ function showCompleteWorkoutForm() {
   els.completeEnergy.value = workout.energy || '';
   els.completeSoreness.value = workout.soreness || '';
 
+  switchTab('log', { keepCompleteForm: true });
   els.completeSleepHours.focus();
 }
 
 function saveCompletedWorkout(event) {
   event.preventDefault();
 
-  const workout = state.workouts.find(item => item.id === state.incompleteWorkoutId);
+  const workout = findWorkoutById(state.incompleteWorkoutId);
 
   if (!workout) {
     alert('All workouts are complete.');
@@ -229,27 +240,73 @@ function saveCompletedWorkout(event) {
   renderHistory();
   renderCsv();
   showDashboardForm();
+  switchTab('history');
+}
+
+function editWorkout(workoutId) {
+  const workout = findWorkoutById(workoutId);
+  if (!workout) return;
+
+  state.editingWorkoutId = workout.id;
+  populateWorkoutForm(workout, { useToday: false });
+  els.logHeading.textContent = 'Edit workout';
+  els.saveWorkoutBtn.textContent = 'Update workout';
+  showDashboardForm();
   switchTab('log');
 }
 
-function duplicateLastWorkout() {
-  if (!state.workouts.length) {
-    alert('No previous workout found.');
+function duplicateWorkout(workoutId) {
+  const workout = findWorkoutById(workoutId);
+  if (!workout) return;
+
+  state.editingWorkoutId = null;
+  populateWorkoutForm(workout, { useToday: true });
+  els.logHeading.textContent = 'New workout';
+  els.saveWorkoutBtn.textContent = 'Save workout';
+  showDashboardForm();
+  switchTab('log');
+}
+
+function saveWorkoutFromForm(event) {
+  event.preventDefault();
+  const formWorkout = collectWorkout();
+
+  if (state.editingWorkoutId) {
+    const existingWorkout = findWorkoutById(state.editingWorkoutId);
+    if (!existingWorkout) {
+      state.editingWorkoutId = null;
+      return;
+    }
+
+    existingWorkout.date = formWorkout.date;
+    existingWorkout.workoutType = formWorkout.workoutType;
+    existingWorkout.exercises = formWorkout.exercises;
+    existingWorkout.cardio = formWorkout.cardio;
+    existingWorkout.energy = formWorkout.energy;
+    existingWorkout.soreness = formWorkout.soreness;
+    existingWorkout.sleepHours = formWorkout.sleepHours;
+    existingWorkout.sleepMinutes = formWorkout.sleepMinutes;
+    existingWorkout.notes = formWorkout.notes;
+
+    saveWorkouts();
+    resetForm();
+    renderHistory();
+    renderCsv();
+    updateIncompleteButton();
+    switchTab('history');
     return;
   }
 
-  const sorted = [...state.workouts].sort((a, b) => {
-    const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
-    if (dateCompare) return dateCompare;
-    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
-  });
-
-  const lastWorkout = sorted[0];
-  populateWorkoutForm(lastWorkout);
-  switchTab('log');
+  state.workouts.push(formWorkout);
+  saveWorkouts();
+  resetForm();
+  renderHistory();
+  renderCsv();
+  updateIncompleteButton();
+  switchTab('history');
 }
 
-function switchTab(tabName) {
+function switchTab(tabName, options = {}) {
   els.tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
   els.panels.forEach(panel => panel.classList.toggle('active', panel.id === tabName));
 
@@ -257,14 +314,23 @@ function switchTab(tabName) {
     showDashboardForm();
   }
 
+  if (tabName === 'log' && !options.keepCompleteForm && els.completeWorkoutForm.hidden) {
+    updateIncompleteButton();
+  }
+
   if (tabName === 'history') renderHistory();
   if (tabName === 'export') renderCsv();
 }
 
-function summarizeWorkout(workout) {
-  const strength = workout.exercises.map(ex => `${ex.name}: ${ex.sets || '-'}x${ex.reps || '-'} @ ${ex.weight || '-'} lb`);
-  const cardio = workout.cardio.map(c => `${c.machine}: ${c.timeMinutes || '-'} min, ${c.intensity || '-'}${c.incline ? `, incline ${c.incline}` : ''}`);
-  return [...strength, ...cardio];
+function getCardioSummary(workout) {
+  if (!workout.cardio || !workout.cardio.length) return '';
+
+  return workout.cardio
+    .map(cardio => {
+      const time = cardio.timeMinutes ? `${cardio.timeMinutes} min` : 'cardio';
+      return `${cardio.machine || 'Cardio'} • ${time}`;
+    })
+    .join(' · ');
 }
 
 function renderHistory() {
@@ -274,22 +340,44 @@ function renderHistory() {
     return;
   }
 
-  const sorted = [...state.workouts].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  const sorted = [...state.workouts].sort(sortWorkoutsNewestFirst);
+
   els.historyList.innerHTML = sorted.map(workout => {
-    const summary = summarizeWorkout(workout).map(line => `<div>${escapeHtml(line)}</div>`).join('') || '<div>No exercise details saved.</div>';
-    const sleep = hasSleep(workout) ? [workout.sleepHours || 0, 'h ', workout.sleepMinutes || 0, 'm'].join('') : 'Incomplete';
+    const complete = hasSleep(workout);
+    const exerciseCount = workout.exercises ? workout.exercises.length : 0;
+    const cardioSummary = getCardioSummary(workout);
+    const status = complete ? '🟢 Complete' : '🟡 Incomplete';
+
     return `
       <article class="history-item">
-        <h3>${escapeHtml(workout.date)} · ${escapeHtml(workout.workoutType)}</h3>
+        <h3>${escapeHtml(workout.workoutType || 'Workout')}</h3>
         <div class="history-meta">
-          ${summary}
-          <div>Energy: ${escapeHtml(workout.energy || '-')} /10 · Soreness: ${escapeHtml(workout.soreness || '-')} /10 · Sleep: ${escapeHtml(sleep)}</div>
-          ${workout.notes ? `<div>Notes: ${escapeHtml(workout.notes)}</div>` : ''}
+          <div>${escapeHtml(workout.date || '')}</div>
+          <div>${status}</div>
+          <div>${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}${cardioSummary ? ` · ${escapeHtml(cardioSummary)}` : ''}</div>
+          <div>Energy: ${escapeHtml(workout.energy || '-')} /10 · Soreness: ${escapeHtml(workout.soreness || '-')} /10</div>
         </div>
-        <div class="history-actions"><button class="danger" data-delete="${workout.id}" type="button">Delete</button></div>
+        <div class="history-actions">
+          <button class="secondary" data-edit="${workout.id}" type="button">Edit</button>
+          <button class="secondary" data-duplicate="${workout.id}" type="button">Duplicate</button>
+          ${complete ? '' : `<button class="primary" data-complete="${workout.id}" type="button">Complete</button>`}
+          <button class="danger" data-delete="${workout.id}" type="button">Delete</button>
+        </div>
       </article>
     `;
   }).join('');
+
+  els.historyList.querySelectorAll('[data-edit]').forEach(button => {
+    button.addEventListener('click', () => editWorkout(button.dataset.edit));
+  });
+
+  els.historyList.querySelectorAll('[data-duplicate]').forEach(button => {
+    button.addEventListener('click', () => duplicateWorkout(button.dataset.duplicate));
+  });
+
+  els.historyList.querySelectorAll('[data-complete]').forEach(button => {
+    button.addEventListener('click', () => showCompleteWorkoutForm(button.dataset.complete));
+  });
 
   els.historyList.querySelectorAll('[data-delete]').forEach(button => {
     button.addEventListener('click', () => {
@@ -368,8 +456,7 @@ function init() {
   els.tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
   document.querySelector('#addExerciseBtn').addEventListener('click', () => addExercise());
   document.querySelector('#addCardioBtn').addEventListener('click', () => addCardio());
-  document.querySelector('#duplicateLastWorkoutBtn').addEventListener('click', duplicateLastWorkout);
-  document.querySelector('#completeIncompleteWorkoutBtn').addEventListener('click', showCompleteWorkoutForm);
+  document.querySelector('#completeIncompleteWorkoutBtn').addEventListener('click', () => showCompleteWorkoutForm());
   document.querySelector('#completeWorkoutForm').addEventListener('submit', saveCompletedWorkout);
   document.querySelector('#cancelCompleteWorkoutBtn').addEventListener('click', showDashboardForm);
   document.querySelector('#resetFormBtn').addEventListener('click', resetForm);
@@ -391,18 +478,7 @@ function init() {
   });
   document.querySelector('#installHintBtn').addEventListener('click', () => els.installDialog.showModal());
   document.querySelector('#closeInstallDialog').addEventListener('click', () => els.installDialog.close());
-
-  els.form.addEventListener('submit', event => {
-    event.preventDefault();
-    const workout = collectWorkout();
-    state.workouts.push(workout);
-    saveWorkouts();
-    resetForm();
-    renderHistory();
-    renderCsv();
-    updateIncompleteButton();
-    switchTab('history');
-  });
+  els.form.addEventListener('submit', saveWorkoutFromForm);
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./service-worker.js');
