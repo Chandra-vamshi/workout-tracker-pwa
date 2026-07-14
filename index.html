@@ -7,18 +7,29 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Workout Tracker" />
+
   <title>Workout Tracker</title>
+
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <header class="app-header">
     <div>
       <p class="eyebrow">Personal PWA</p>
       <h1>Workout Tracker</h1>
     </div>
-    <button id="installHintBtn" class="icon-button" type="button" aria-label="Install instructions">+</button>
+
+    <button
+      id="installHintBtn"
+      class="icon-button"
+      type="button"
+      aria-label="Install instructions"
+    >
+      +
+    </button>
   </header>
 
   <main class="app-shell">
@@ -29,8 +40,15 @@
     </nav>
 
     <section id="log" class="panel active" aria-labelledby="log-heading">
-      <div id="dashboardActions" class="section-card">
-        <button id="completeIncompleteWorkoutBtn" class="primary wide" type="button" hidden>Complete Incomplete Workout</button>
+      <div id="dashboardActions" class="section-card" hidden>
+        <button
+          id="completeIncompleteWorkoutBtn"
+          class="primary wide"
+          type="button"
+          hidden
+        >
+          Complete Incomplete Workout
+        </button>
       </div>
 
       <div class="section-title-row">
@@ -39,10 +57,13 @@
 
       <form id="workoutForm" autocomplete="off">
         <div class="grid two">
-          <label>Date
+          <label>
+            Date
             <input id="date" name="date" type="date" required />
           </label>
-          <label>Workout type
+
+          <label>
+            Workout type
             <select id="workoutType" name="workoutType" required>
               <option>Full Body</option>
               <option>Upper</option>
@@ -55,69 +76,169 @@
         <div class="section-card">
           <div class="section-title-row">
             <h3>Exercises</h3>
-            <button id="addExerciseBtn" class="secondary" type="button">Add exercise</button>
+
+            <button id="addExerciseBtn" class="secondary" type="button">
+              Add Exercise
+            </button>
           </div>
+
           <div id="exerciseList" class="stack"></div>
         </div>
 
         <div class="section-card">
           <div class="section-title-row">
             <h3>Cardio</h3>
-            <button id="addCardioBtn" class="secondary" type="button">Add cardio</button>
+
+            <button id="addCardioBtn" class="secondary" type="button">
+              Add Cardio
+            </button>
           </div>
+
           <div id="cardioList" class="stack"></div>
         </div>
 
         <div class="section-card">
           <h3>Recovery</h3>
+
           <div class="grid two">
-            <label>Energy /10
-              <input id="energy" name="energy" type="number" min="1" max="10" inputmode="numeric" placeholder="8" />
+            <label>
+              Energy /10
+              <input
+                id="energy"
+                name="energy"
+                type="number"
+                min="1"
+                max="10"
+                inputmode="numeric"
+                placeholder="8"
+              />
             </label>
-            <label>Soreness /10
-              <input id="soreness" name="soreness" type="number" min="1" max="10" inputmode="numeric" placeholder="3" />
+
+            <label>
+              Soreness /10
+              <input
+                id="soreness"
+                name="soreness"
+                type="number"
+                min="1"
+                max="10"
+                inputmode="numeric"
+                placeholder="3"
+              />
             </label>
-            <label>Sleep hours
-              <input id="sleepHours" name="sleepHours" type="number" min="0" max="24" inputmode="numeric" placeholder="7" />
+
+            <label>
+              Sleep hours
+              <input
+                id="sleepHours"
+                name="sleepHours"
+                type="number"
+                min="0"
+                max="24"
+                inputmode="numeric"
+                placeholder="7"
+              />
             </label>
-            <label>Sleep minutes
-              <input id="sleepMinutes" name="sleepMinutes" type="number" min="0" max="59" inputmode="numeric" placeholder="30" />
+
+            <label>
+              Sleep minutes
+              <input
+                id="sleepMinutes"
+                name="sleepMinutes"
+                type="number"
+                min="0"
+                max="59"
+                inputmode="numeric"
+                placeholder="30"
+              />
             </label>
           </div>
-          <label>Notes
-            <textarea id="notes" name="notes" rows="3" placeholder="How did it feel? Anything to remember next time?"></textarea>
+
+          <label>
+            Notes
+            <textarea
+              id="notes"
+              name="notes"
+              rows="3"
+              placeholder="How did it feel? Anything to remember next time?"
+            ></textarea>
           </label>
         </div>
 
         <div class="sticky-actions">
-          <button id="saveWorkoutBtn" class="primary" type="submit">Save workout</button>
-          <button id="resetFormBtn" class="ghost" type="button">Reset</button>
+          <button id="saveWorkoutBtn" class="primary" type="submit">
+            Save Workout
+          </button>
+
+          <button id="resetFormBtn" class="ghost" type="button">
+            Reset
+          </button>
         </div>
       </form>
 
       <form id="completeWorkoutForm" autocomplete="off" hidden>
         <div class="section-card">
           <h2>Complete incomplete workout</h2>
+
           <p id="completeWorkoutMessage" class="muted"></p>
+
           <div class="grid two">
-            <label>Sleep hours
-              <input id="completeSleepHours" type="number" min="0" max="24" inputmode="numeric" placeholder="7" />
+            <label>
+              Sleep hours
+              <input
+                id="completeSleepHours"
+                type="number"
+                min="0"
+                max="24"
+                inputmode="numeric"
+                placeholder="7"
+              />
             </label>
-            <label>Sleep minutes
-              <input id="completeSleepMinutes" type="number" min="0" max="59" inputmode="numeric" placeholder="30" />
+
+            <label>
+              Sleep minutes
+              <input
+                id="completeSleepMinutes"
+                type="number"
+                min="0"
+                max="59"
+                inputmode="numeric"
+                placeholder="30"
+              />
             </label>
-            <label>Energy /10
-              <input id="completeEnergy" type="number" min="1" max="10" inputmode="numeric" placeholder="8" />
+
+            <label>
+              Energy /10
+              <input
+                id="completeEnergy"
+                type="number"
+                min="1"
+                max="10"
+                inputmode="numeric"
+                placeholder="8"
+              />
             </label>
-            <label>Soreness /10
-              <input id="completeSoreness" type="number" min="1" max="10" inputmode="numeric" placeholder="3" />
+
+            <label>
+              Soreness /10
+              <input
+                id="completeSoreness"
+                type="number"
+                min="1"
+                max="10"
+                inputmode="numeric"
+                placeholder="3"
+              />
             </label>
           </div>
         </div>
 
         <div class="sticky-actions">
           <button class="primary" type="submit">Save</button>
-          <button id="cancelCompleteWorkoutBtn" class="ghost" type="button">Cancel</button>
+
+          <button id="cancelCompleteWorkoutBtn" class="ghost" type="button">
+            Cancel
+          </button>
         </div>
       </form>
     </section>
@@ -125,67 +246,108 @@
     <section id="history" class="panel" aria-labelledby="history-heading">
       <div class="section-title-row">
         <h2 id="history-heading">History</h2>
-        <button id="clearAllBtn" class="danger" type="button">Clear all</button>
+
+        <button id="clearAllBtn" class="danger" type="button">
+          Clear All
+        </button>
       </div>
+
       <div id="historyList" class="history-list"></div>
     </section>
 
     <section id="export" class="panel" aria-labelledby="export-heading">
-      <h2 id="export-heading">CSV export</h2>
-      <p class="muted">Export a clean CSV for ChatGPT analysis. Each exercise or cardio entry becomes one row.</p>
-      <button id="downloadCsvBtn" class="primary" type="button">Download CSV</button>
-      <button id="copyCsvBtn" class="secondary wide" type="button">Copy CSV to clipboard</button>
-      <textarea id="csvPreview" rows="12" readonly aria-label="CSV preview"></textarea>
+      <h2 id="export-heading">Export and backup</h2>
+
+      <div class="section-card">
+        <h3>CSV Export</h3>
+
+        <p class="muted">
+          Export workout details in a clean format for ChatGPT analysis.
+          Each strength set becomes a separate CSV row.
+        </p>
+
+        <div class="button-stack">
+          <button id="downloadCsvBtn" class="primary wide" type="button">
+            Download CSV
+          </button>
+
+          <button id="copyCsvBtn" class="secondary wide" type="button">
+            Copy CSV to Clipboard
+          </button>
+        </div>
+
+        <textarea
+          id="csvPreview"
+          rows="10"
+          readonly
+          aria-label="CSV preview"
+        ></textarea>
+      </div>
+
+      <div class="section-card">
+        <h3>Full Backup</h3>
+
+        <p class="muted">
+          Export or restore all workouts, exercise sets, cardio, sleep,
+          recovery values, notes, dates, and workout IDs.
+        </p>
+
+        <div class="button-stack">
+          <button id="exportBackupBtn" class="primary wide" type="button">
+            Export Backup
+          </button>
+
+          <button id="importBackupBtn" class="secondary wide" type="button">
+            Import Backup
+          </button>
+        </div>
+
+        <input
+          id="backupFileInput"
+          type="file"
+          accept="application/json,.json"
+          hidden
+        />
+      </div>
     </section>
   </main>
 
   <dialog id="installDialog">
     <h2>Install on iPhone</h2>
-    <p>Open this app in Safari, tap Share, then choose <strong>Add to Home Screen</strong>.</p>
-    <button class="primary wide" id="closeInstallDialog" type="button">Got it</button>
+
+    <p>
+      Open this app in Safari, tap Share, then choose
+      <strong>Add to Home Screen</strong>.
+    </p>
+
+    <button class="primary wide" id="closeInstallDialog" type="button">
+      Got it
+    </button>
   </dialog>
 
   <template id="exerciseTemplate">
-    <div class="entry-card exercise-entry">
-      <button class="remove-entry" type="button" aria-label="Remove exercise">×</button>
-      <label>Exercise
-        <select class="exercise-name"></select>
-      </label>
-      <p class="muted previous-exercise-values">No previous data</p>
-      <div class="grid three">
-        <label>Sets
-          <input class="exercise-sets" type="number" min="0" inputmode="numeric" placeholder="2" />
+    <article class="exercise-card exercise-entry">
+      <div class="exercise-card-header">
+        <label class="exercise-select-label">
+          Exercise
+          <select class="exercise-name"></select>
         </label>
-        <label>Reps
-          <input class="exercise-reps" type="number" min="0" inputmode="numeric" placeholder="12" />
-        </label>
-        <label>Weight
-          <input class="exercise-weight" type="number" min="0" step="0.5" inputmode="decimal" placeholder="lbs" />
-        </label>
-      </div>
-    </div>
-  </template>
 
-  <template id="cardioTemplate">
-    <div class="entry-card cardio-entry">
-      <button class="remove-entry" type="button" aria-label="Remove cardio">×</button>
-      <label>Machine
-        <select class="cardio-machine"></select>
-      </label>
-      <div class="grid two">
-        <label>Time minutes
-          <input class="cardio-time" type="number" min="0" inputmode="numeric" placeholder="15" />
-        </label>
-        <label>Speed / resistance
-          <input class="cardio-intensity" type="text" placeholder="3.5 or R8" />
-        </label>
-        <label class="incline-label">Incline
-          <input class="cardio-incline" type="text" placeholder="8-10" />
-        </label>
+        <button
+          class="remove-entry remove-exercise"
+          type="button"
+          aria-label="Remove exercise"
+        >
+          ×
+        </button>
       </div>
-    </div>
-  </template>
 
-  <script src="app.js" defer></script>
-</body>
-</html>
+      <p class="previous-exercise-values">No previous data</p>
+
+      <div class="exercise-sets-list"></div>
+
+      <button class="secondary wide add-set-button" type="button">
+        Add Set
+      </button>
+    </article>
+ 
